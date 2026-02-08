@@ -1,0 +1,1 @@
+docker run --rm -v C:\work_dir\lean4:/workspace -w /workspace leanprovercommunity/lean4 -lc "lean test.lean
