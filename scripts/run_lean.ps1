@@ -1,9 +1,10 @@
 param(
-  [string]$Cmd = "lake env lean test.lean",
+  [string]$Cmd = "lake env lean examples/test.lean",
   [string]$Image = "leanprovercommunity/lean4:fixed"
 )
 
-$Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Root = Split-Path -Parent $ScriptDir
 $ElanCache = Join-Path $Root ".elan-cache"
 
 if (-not (Test-Path $ElanCache)) {

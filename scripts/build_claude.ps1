@@ -1,9 +1,10 @@
 param(
   [string]$Tag = "leanprovercommunity/lean4:claude",
-  [string]$Dockerfile = "Dockerfile.claude.latest"
+  [string]$Dockerfile = "docker\\Dockerfile.claude.latest"
 )
 
-$Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Root = Split-Path -Parent $ScriptDir
 $dockerfilePath = Join-Path $Root $Dockerfile
 
 if (-not (Test-Path $dockerfilePath)) {

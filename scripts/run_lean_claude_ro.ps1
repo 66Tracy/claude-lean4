@@ -1,19 +1,14 @@
 param(
-  [string]$Cmd = "lake env lean test.lean",
-  [string]$Image = "leanprovercommunity/lean4:claude",
-  [string]$ScratchDir = ".scratch"
+  [string]$Cmd = "lake env lean examples/test.lean",
+  [string]$Image = "leanprovercommunity/lean4:claude"
 )
 
-$Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Root = Split-Path -Parent $ScriptDir
 $ElanCache = Join-Path $Root ".elan-cache"
-$Scratch = Join-Path $Root $ScratchDir
 
 if (-not (Test-Path $ElanCache)) {
   New-Item -ItemType Directory -Force -Path $ElanCache | Out-Null
-}
-
-if (-not (Test-Path $Scratch)) {
-  New-Item -ItemType Directory -Force -Path $Scratch | Out-Null
 }
 
 $elanBin = Join-Path $ElanCache "bin\elan"
@@ -28,15 +23,12 @@ if (-not (Test-Path $elanBin)) {
   if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
-# Unique per-run Lake volume to avoid lock contention
-$LakeVolume = "lake_cache_{0}" -f ([guid]::NewGuid().ToString("N"))
-
 $dockerArgs = @(
   "run", "--rm", "--pull=never",
   "-v", "${Root}:/workspace:ro",
   "-v", "${ElanCache}:/home/lean/.elan",
-  "-v", "${Scratch}:/scratch",
-  "--mount", "type=volume,source=$LakeVolume,target=/workspace/.lake",
+  "-e", "LAKE_DIR=/scratch/.lake",
+  "--tmpfs", "/scratch:exec,mode=1777",
   "-w", "/workspace",
   $Image,
   "-lc", $Cmd

@@ -8,22 +8,23 @@
 - Claude 镜像：`leanprovercommunity/lean4:claude`
 - Lean 版本：`leanprover/lean4:v4.10.0`
 - Mathlib：本地路径 `mathlib4-4.10.0/`（**不进仓库，需要手动下载**）
-- 一键脚本：`run_lean.ps1` / `run_lean_claude.ps1`
-- 只读隔离脚本：`run_lean_claude_ro.ps1` / `run_lean_claude_ro_persist.ps1`
+- 任务集：`miniF2F-benchmark/`
+- 脚本目录：`scripts/`
+- 示例目录：`examples/`
 - 共享工具链缓存：`.elan-cache/`
 
 ## 一键启动（推荐）
 
-默认运行 `test.lean`：
+默认运行 `examples/test.lean`：
 
 ```
-.\run_lean.ps1
+.\scripts\run_lean.ps1
 ```
 
 运行任意命令（例如检查导入）：
 
 ```
-.\run_lean.ps1 "lake env lean check_list.lean"
+.\scripts\run_lean.ps1 "lake env lean examples/check_list.lean"
 ```
 
 脚本特性：
@@ -33,16 +34,16 @@
 
 ## Claude 镜像一键入口
 
-默认运行 `test.lean`：
+默认运行 `examples/test.lean`：
 
 ```
-.\run_lean_claude.ps1
+.\scripts\run_lean_claude.ps1
 ```
 
 运行 claude：
 
 ```
-.\run_lean_claude.ps1 "claude --help"
+.\scripts\run_lean_claude.ps1 "claude --help"
 ```
 
 ## 只读隔离运行（并行推荐）
@@ -50,30 +51,63 @@
 ### 临时草稿（容器退出即清理）
 
 ```
-.\run_lean_claude_ro.ps1
+.\scripts\run_lean_claude_ro.ps1
 ```
 
 说明：
 - `/workspace` 只读
 - `/scratch` 为 tmpfs（高速、退出即清理）
-- `.lake` 每次使用独立卷，避免并发锁冲突
+- `LAKE_DIR=/scratch/.lake`，避免在只读 workspace 下写入
 
 ### 持久化草稿（可保留草稿）
 
 ```
-.\run_lean_claude_ro_persist.ps1
+.\scripts\run_lean_claude_ro_persist.ps1
 ```
 
 可指定草稿目录：
 
 ```
-.\run_lean_claude_ro_persist.ps1 -ScratchDir ".scratch2"
+.\scripts\run_lean_claude_ro_persist.ps1 -ScratchDir ".scratch2"
 ```
 
 说明：
 - `/workspace` 只读
 - `/scratch` 持久化映射到 `C:\work_dir\lean4\.scratch`（可自定义）
-- `.lake` 每次使用独立卷，避免并发锁冲突
+- `LAKE_DIR=/scratch/.lake`，避免在只读 workspace 下写入
+
+## 任务自动化（miniF2F）
+
+### 1) 生成任务工作区
+
+```
+.\scripts\prepare_task.ps1 -Id mathd_algebra_478
+```
+
+生成内容在：
+
+```
+C:\work_dir\lean4\.scratch\tasks\mathd_algebra_478
+```
+
+### 2) 自动运行任务（Claude）
+
+```
+.\scripts\run_task.ps1 -Id mathd_algebra_478
+```
+
+说明：
+- 自动从 `miniF2F-benchmark\test-example.jsonl` 取出 `id` 和 `formal_statement`
+- 生成 `task-{id}.md` 并创建 `submit.lean` / `submit.md` / `scratch/`
+- 启动容器时仅挂载 `/.scratch/tasks/{id}` 为 `/task`
+- `claude` 读取任务内容并将输出写到 `/task/claude.out`
+- 运行结束后检查 `submit.lean` / `submit.md` 是否非空，并写入 `/task/status.json`
+  - 若 `submit.lean` / `submit.md` 为空，脚本会尝试从 `claude.out` 中解析
+
+可选参数：
+- `-RequireSubmit $false` 可关闭提交文件非空检查
+- `-MinSubmitBytes` 可设置最小字节数阈值
+- `-TimeoutSec` 设置容器运行超时时间（秒），超时会自动停止容器并写入状态
 
 ## Claude 生成代码并写入 /scratch（持久化草稿区）
 
@@ -84,34 +118,36 @@
 示例：在容器内调用 claude，生成 Python 快速排序并写到持久化草稿区：
 
 ```
-.\run_lean_claude_ro_persist.ps1 "set -a; source /workspace/.env; set +a; cd /scratch; claude --permission-mode bypassPermissions -p 'Write a Python quicksort implementation. Output only code, no fences.' > /scratch/quicksort.py"
+.\scripts\run_lean_claude_ro_persist.ps1 "set -a; source /workspace/.env; set +a; cd /scratch; claude --permission-mode bypassPermissions -p 'Write a Python quicksort implementation. Output only code, no fences.' > /scratch/quicksort.py"
 ```
 
 注意事项：
 - `--permission-mode bypassPermissions` 可避免 Claude 输出“需要权限”而不写代码。
 - 如果输出仍包含 ``` 代码围栏，可用文本处理去除。
 - `/workspace` 是只读的，所有输出应写到 `/scratch`。
-- 不要把 `.env` 提交到版本库（建议加入 `.gitignore`）。
+- 不要把 `.env` 提交到版本库（已加入 `.gitignore`）。
 
 ## 文件结构说明
 
-- `mathlib4-4.10.0/`：Mathlib 源码（离线解压）
+- `examples/`
+  - `test.lean`
+  - `check_list.lean`
+- `miniF2F-benchmark/`
+  - `task-template.md`
+  - `test-example.jsonl`
+- `scripts/`
+  - `run_lean.ps1`
+  - `run_lean_claude.ps1`
+  - `run_lean_claude_ro.ps1`
+  - `run_lean_claude_ro_persist.ps1`
+  - `prepare_task.ps1`
+  - `run_task.ps1`
+  - `build_claude.ps1`
+- `docker/`
+  - `Dockerfile.claude.latest`
 - `lakefile.lean`：本地路径依赖 `require mathlib from "./mathlib4-4.10.0"`
 - `lean-toolchain`：锁定 `leanprover/lean4:v4.10.0`
-- `run_lean.ps1`：一键启动脚本
-- `run_lean_claude.ps1`：Claude 版一键启动脚本
-- `run_lean_claude_ro.ps1`：只读隔离（临时草稿）
-- `run_lean_claude_ro_persist.ps1`：只读隔离（持久化草稿）
 - `.elan-cache/`：工具链缓存（避免重复下载）
-- `Dockerfile.claude.latest`：基于 `leanprovercommunity/lean4:latest` 构建 Claude 镜像
-- `build_claude.ps1`：一键构建 Claude 镜像脚本
-
-仓库忽略的大目录（见 `.gitignore`）：
-- `.lake/`
-- `.elan-cache/`
-- `.scratch/`
-- `mathlib4-4.10.0/`
-- `.env`
 
 ## 在其他机器复刻环境（推荐流程）
 
@@ -149,7 +185,7 @@ docker tag leanprovercommunity/lean4:latest leanprovercommunity/lean4:fixed
 在项目目录运行：
 
 ```
-.\run_lean.ps1
+.\scripts\run_lean.ps1
 ```
 
 这一步会：
@@ -159,7 +195,7 @@ docker tag leanprovercommunity/lean4:latest leanprovercommunity/lean4:fixed
 ### 4) 获取 Mathlib 预编译缓存（推荐）
 
 ```
-.\run_lean.ps1 "lake exe cache get"
+.\scripts\run_lean.ps1 "lake exe cache get"
 ```
 
 这样可以避免 Mathlib 全量编译，大幅提速。
@@ -167,13 +203,13 @@ docker tag leanprovercommunity/lean4:latest leanprovercommunity/lean4:fixed
 ### 5) 构建 Claude 镜像（可选）
 
 ```
-.\build_claude.ps1
+.\scripts\build_claude.ps1
 ```
 
 ### 6) 验证环境
 
 ```
-.\run_lean.ps1 "lake env lean check_list.lean"
+.\scripts\run_lean.ps1 "lake env lean examples/check_list.lean"
 ```
 
 无报错即完成。
@@ -183,7 +219,7 @@ docker tag leanprovercommunity/lean4:latest leanprovercommunity/lean4:fixed
 - 并行容器运行时，**不要同时执行 `lake update` 或 `lake build`**，避免抢锁。
 - 日常只需运行：
   ```
-  .\run_lean.ps1 "lake env lean yourfile.lean"
+  .\scripts\run_lean.ps1 "lake env lean examples/yourfile.lean"
   ```
 - 若出现 `unknown module prefix 'Mathlib'`，说明没有通过 Lake 环境运行。
 
