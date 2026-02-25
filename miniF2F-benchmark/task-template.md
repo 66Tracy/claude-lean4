@@ -162,9 +162,7 @@ Do not add any extra text outside these markers.
 
 ---
 
-## Final Statement Placeholder
-
-This placeholder will be replaced by the actual Lean4 formal statement to be proved:
+## Lean4 formal statement to be proved
 
 {question}
 

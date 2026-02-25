@@ -18,13 +18,13 @@
 默认运行 `examples/test.lean`：
 
 ```
-.\scripts\run_lean.ps1
+python scripts/run_lean.py
 ```
 
 运行任意命令（例如检查导入）：
 
 ```
-.\scripts\run_lean.ps1 "lake env lean examples/check_list.lean"
+python scripts/run_lean.py "lake env lean examples/check_list.lean"
 ```
 
 脚本特性：
@@ -32,18 +32,20 @@
 - 自动 bootstrap `.elan-cache`（首次运行会把工具链拷贝出来）
 - 使用 Lake 环境，确保 Mathlib 可用
 
+说明：已提供跨平台 `scripts/*.py` 脚本。
+
 ## Claude 镜像一键入口
 
 默认运行 `examples/test.lean`：
 
 ```
-.\scripts\run_lean_claude.ps1
+python scripts/run_lean_claude.py
 ```
 
 运行 claude：
 
 ```
-.\scripts\run_lean_claude.ps1 "claude --help"
+python scripts/run_lean_claude.py "claude --help"
 ```
 
 ## 只读隔离运行（并行推荐）
@@ -51,7 +53,7 @@
 ### 临时草稿（容器退出即清理）
 
 ```
-.\scripts\run_lean_claude_ro.ps1
+python scripts/run_lean_claude_ro.py
 ```
 
 说明：
@@ -62,13 +64,13 @@
 ### 持久化草稿（可保留草稿）
 
 ```
-.\scripts\run_lean_claude_ro_persist.ps1
+python scripts/run_lean_claude_ro_persist.py
 ```
 
 可指定草稿目录：
 
 ```
-.\scripts\run_lean_claude_ro_persist.ps1 -ScratchDir ".scratch2"
+python scripts/run_lean_claude_ro_persist.py --scratch-dir ".scratch2"
 ```
 
 说明：
@@ -81,7 +83,7 @@
 ### 1) 生成任务工作区
 
 ```
-.\scripts\prepare_task.ps1 -Id mathd_algebra_478
+python scripts/prepare_task.py -Id mathd_algebra_478
 ```
 
 生成内容在：
@@ -93,7 +95,7 @@ C:\work_dir\lean4\.scratch\tasks\mathd_algebra_478
 ### 2) 自动运行任务（Claude）
 
 ```
-.\scripts\run_task.ps1 -Id mathd_algebra_478
+python scripts/run_task.py -Id mathd_algebra_478
 ```
 
 说明：
@@ -118,7 +120,7 @@ C:\work_dir\lean4\.scratch\tasks\mathd_algebra_478
 示例：在容器内调用 claude，生成 Python 快速排序并写到持久化草稿区：
 
 ```
-.\scripts\run_lean_claude_ro_persist.ps1 "set -a; source /workspace/.env; set +a; cd /scratch; claude --permission-mode bypassPermissions -p 'Write a Python quicksort implementation. Output only code, no fences.' > /scratch/quicksort.py"
+python scripts/run_lean_claude_ro_persist.py "set -a; source /workspace/.env; set +a; cd /scratch; claude --permission-mode bypassPermissions -p 'Write a Python quicksort implementation. Output only code, no fences.' > /scratch/quicksort.py"
 ```
 
 注意事项：
@@ -136,13 +138,13 @@ C:\work_dir\lean4\.scratch\tasks\mathd_algebra_478
   - `task-template.md`
   - `test-example.jsonl`
 - `scripts/`
-  - `run_lean.ps1`
-  - `run_lean_claude.ps1`
-  - `run_lean_claude_ro.ps1`
-  - `run_lean_claude_ro_persist.ps1`
-  - `prepare_task.ps1`
-  - `run_task.ps1`
-  - `build_claude.ps1`
+  - `run_lean.py`
+  - `run_lean_claude.py`
+  - `run_lean_claude_ro.py`
+  - `run_lean_claude_ro_persist.py`
+  - `prepare_task.py`
+  - `run_task.py`
+  - `build_claude.py`
 - `docker/`
   - `Dockerfile.claude.latest`
 - `lakefile.lean`：本地路径依赖 `require mathlib from "./mathlib4-4.10.0"`
@@ -185,7 +187,7 @@ docker tag leanprovercommunity/lean4:latest leanprovercommunity/lean4:fixed
 在项目目录运行：
 
 ```
-.\scripts\run_lean.ps1
+python scripts/run_lean.py
 ```
 
 这一步会：
@@ -195,7 +197,7 @@ docker tag leanprovercommunity/lean4:latest leanprovercommunity/lean4:fixed
 ### 4) 获取 Mathlib 预编译缓存（推荐）
 
 ```
-.\scripts\run_lean.ps1 "lake exe cache get"
+python scripts/run_lean.py "lake exe cache get"
 ```
 
 这样可以避免 Mathlib 全量编译，大幅提速。
@@ -203,13 +205,13 @@ docker tag leanprovercommunity/lean4:latest leanprovercommunity/lean4:fixed
 ### 5) 构建 Claude 镜像（可选）
 
 ```
-.\scripts\build_claude.ps1
+python scripts/build_claude.py
 ```
 
 ### 6) 验证环境
 
 ```
-.\scripts\run_lean.ps1 "lake env lean examples/check_list.lean"
+python scripts/run_lean.py "lake env lean examples/check_list.lean"
 ```
 
 无报错即完成。
@@ -219,7 +221,7 @@ docker tag leanprovercommunity/lean4:latest leanprovercommunity/lean4:fixed
 - 并行容器运行时，**不要同时执行 `lake update` 或 `lake build`**，避免抢锁。
 - 日常只需运行：
   ```
-  .\scripts\run_lean.ps1 "lake env lean examples/yourfile.lean"
+  python scripts/run_lean.py "lake env lean examples/yourfile.lean"
   ```
 - 若出现 `unknown module prefix 'Mathlib'`，说明没有通过 Lake 环境运行。
 
